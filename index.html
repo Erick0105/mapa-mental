@@ -90,7 +90,7 @@
           <button
             class="btn"
             id="btn-share"
-            title="Copiar link para colaborar em tempo real"
+            title="Escolher sala e copiar link para colaborar em tempo real"
           >
             Compartilhar
           </button>
@@ -455,6 +455,51 @@
           </button>
           <button class="btn primary" id="feedback-whatsapp" type="button">
             Enviar por WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="share-overlay" hidden>
+      <div
+        class="modal"
+        id="share-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-title"
+      >
+        <div class="modal-title" id="share-title">
+          Compartilhar
+          <button
+            class="modal-close"
+            id="share-close"
+            type="button"
+            title="Fechar"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          Escolha o nome da sala. Quem abrir o link entra no mesmo quadro em
+          tempo real (precisa fazer login com Google e ter e-mail
+          autorizado).
+          <input
+            id="share-room-input"
+            class="name-input"
+            style="width: 100%; margin-top: 10px"
+            maxlength="60"
+            placeholder="nome-da-sala"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="modal-actions">
+          <button class="btn" id="share-cancel" type="button">
+            Cancelar
+          </button>
+          <button class="btn primary" id="share-copy" type="button">
+            Copiar link
           </button>
         </div>
       </div>

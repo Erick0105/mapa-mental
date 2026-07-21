@@ -2849,7 +2849,7 @@ document.getElementById("file-json").onchange = (ev) => {
 */
 /* `firebaseConfig` é definido em firebase-config.js (carregado antes deste
    arquivo no index.html), que fica fora do git — veja o passo 5 acima. */
-const roomId = new URLSearchParams(location.search).get("room") || "geral";
+let roomId = new URLSearchParams(location.search).get("room") || "geral";
 let collabRef = null;
 let presenceListRef = null;
 let applyingRemote = false;
@@ -3084,7 +3084,67 @@ function pushRemote(force) {
   );
 }
 
-document.getElementById("btn-share").onclick = async () => {
+/* ---------------- compartilhar (popup para escolher a sala) ---------------- */
+const shareOverlay = document.getElementById("share-overlay");
+const shareRoomInput = document.getElementById("share-room-input");
+const shareCloseBtn = document.getElementById("share-close");
+const shareCancelBtn = document.getElementById("share-cancel");
+const shareCopyBtn = document.getElementById("share-copy");
+
+function slugifyRoom(raw) {
+  const slug = raw
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "geral";
+}
+
+function switchRoom(newRoom) {
+  if (newRoom === roomId) return;
+  const wasConnected = !!collabRef;
+  if (wasConnected) disconnectCollab();
+  roomId = newRoom;
+  const url = new URL(location.href);
+  url.searchParams.set("room", roomId);
+  window.history.replaceState(null, "", url);
+  if (wasConnected) connectCollab();
+}
+
+function openShare() {
+  closeSettings();
+  shareRoomInput.value = roomId;
+  shareOverlay.hidden = false;
+  shareRoomInput.focus();
+  shareRoomInput.select();
+}
+function closeShare() {
+  shareOverlay.hidden = true;
+}
+document.getElementById("btn-share").addEventListener("click", openShare);
+shareCloseBtn.addEventListener("click", closeShare);
+shareCancelBtn.addEventListener("click", closeShare);
+shareOverlay.addEventListener("click", (ev) => {
+  if (ev.target === shareOverlay) closeShare();
+});
+shareRoomInput.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    shareCopyBtn.click();
+  }
+});
+window.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && !shareOverlay.hidden) {
+    ev.preventDefault();
+    closeShare();
+  }
+});
+shareCopyBtn.addEventListener("click", async () => {
+  const room = slugifyRoom(shareRoomInput.value);
+  switchRoom(room);
   const url = new URL(location.href);
   url.searchParams.set("room", roomId);
   try {
@@ -3093,7 +3153,8 @@ document.getElementById("btn-share").onclick = async () => {
   } catch (e) {
     toast(url.toString());
   }
-};
+  closeShare();
+});
 
 /* ---------------- tema (claro / escuro / sistema) ---------------- */
 const THEME_KEY = "cluster:theme";
