@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Construtor de Cluster de Site</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      (function () {
+        var saved = localStorage.getItem("cluster:theme") || "system";
+        var dark =
+          saved === "dark" ||
+          (saved === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.setAttribute(
+          "data-theme",
+          dark ? "dark" : "light",
+        );
+      })();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <div class="dot"></div>
+          <div>
+            <h1>Construtor de Cluster de Site</h1>
+            <span>Arquitetura de conteúdo · arraste, conecte e exporte</span>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="group">
+          <button class="btn" id="btn-fit" title="Enquadrar tudo">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"
+              />
+            </svg>
+            Enquadrar
+          </button>
+          <button class="btn" id="btn-example" title="Recarregar exemplo">
+            Exemplo
+          </button>
+          <button
+            class="btn"
+            id="btn-layout"
+            title="Reorganiza os itens automaticamente em hierarquia"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="4" r="2" />
+              <circle cx="6" cy="12" r="2" />
+              <circle cx="18" cy="12" r="2" />
+              <circle cx="12" cy="20" r="2" />
+              <path d="M12 6v3M8 11l2.5 3M16 11l-2.5 3" />
+            </svg>
+            Organizar
+          </button>
+          <button class="btn" id="btn-clear" title="Começar do zero">
+            Limpar
+          </button>
+        </div>
+        <div class="group">
+          <span
+            id="collab-dot"
+            class="collab-dot"
+            title="Colaboração: verificando..."
+          ></span>
+          <input
+            id="collab-name"
+            class="name-input"
+            maxlength="18"
+            placeholder="Seu nome"
+            title="Nome exibido para quem estiver colaborando com você"
+          />
+          <button
+            class="btn"
+            id="btn-share"
+            title="Copiar link para colaborar em tempo real"
+          >
+            Compartilhar
+          </button>
+        </div>
+        <div class="group">
+          <label
+            class="btn"
+            title="Abrir um projeto .json"
+            style="cursor: pointer"
+          >
+            Abrir<input
+              id="file-json"
+              type="file"
+              accept="application/json,.json"
+              hidden
+            />
+          </label>
+          <div class="export-wrap">
+            <button
+              class="btn"
+              id="btn-export"
+              title="Exportar"
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
+              Exportar
+            </button>
+            <div class="settings-panel" id="export-panel" hidden>
+              <div class="settings-sec-title">Arquivo</div>
+              <div class="export-row">
+                <button class="btn" id="btn-json" title="Baixar JSON do projeto">
+                  .json
+                </button>
+                <button
+                  class="btn"
+                  id="btn-md"
+                  title="Exportar lista de páginas em Markdown"
+                >
+                  .md
+                </button>
+                <button
+                  class="btn"
+                  id="btn-csv"
+                  title="Exportar lista de páginas em CSV"
+                >
+                  .csv
+                </button>
+                <button class="btn" id="btn-png" title="Exportar imagem PNG">
+                  PNG
+                </button>
+                <button class="btn" id="btn-pdf" title="Exportar PDF">
+                  PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="group settings-wrap">
+          <button
+            class="btn icobtn"
+            id="btn-settings"
+            title="Perfil"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <img id="settings-avatar" class="avatar-img" alt="" hidden />
+            <svg
+              id="profile-icon-default"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20.5c0-4.1 3.6-7.2 8-7.2s8 3.1 8 7.2" />
+            </svg>
+          </button>
+
+          <div class="settings-panel" id="settings-panel" hidden>
+            <div class="settings-sec-title">Tema</div>
+            <div class="theme-toggle" id="theme-toggle">
+              <button class="theme-opt" data-theme-choice="light" type="button">
+                Claro
+              </button>
+              <button class="theme-opt" data-theme-choice="dark" type="button">
+                Escuro
+              </button>
+              <button class="theme-opt" data-theme-choice="system" type="button">
+                Sistema
+              </button>
+            </div>
+
+            <div class="settings-sec-title">Conta Google</div>
+            <div id="account-signed-out">
+              <button
+                class="btn"
+                id="btn-google-signin"
+                style="width: 100%"
+                title="Necessário para colaborar em tempo real"
+              >
+                Entrar com Google
+              </button>
+              <small
+                id="google-config-hint"
+                style="
+                  display: block;
+                  margin-top: 6px;
+                  color: var(--muted);
+                  font-size: 11px;
+                "
+              >
+                Colaboração não configurada — veja o README.
+              </small>
+            </div>
+            <div id="account-signed-in" hidden>
+              <div class="account-row">
+                <img id="account-avatar" class="avatar-img lg" alt="" />
+                <div class="account-meta">
+                  <b id="account-name"></b>
+                  <small id="account-email"></small>
+                </div>
+              </div>
+              <button class="btn" id="btn-signout" style="width: 100%">
+                Sair
+              </button>
+            </div>
+
+            <div class="settings-sec-title">Ajuda</div>
+            <div class="export-row">
+              <button class="btn" id="btn-help" style="flex: 1 1 100%">
+                Como utilizar
+              </button>
+              <button class="btn" id="btn-feedback" style="flex: 1 1 100%">
+                Adicionar feedback
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="work" id="work">
+        <button
+          class="aside-toggle"
+          id="aside-toggle"
+          type="button"
+          title="Recolher barra lateral"
+          aria-expanded="true"
+          aria-controls="aside"
+        >
+          <svg
+            id="aside-toggle-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
+        <aside id="aside">
+          <div class="aside-inner" id="aside-inner">
+          <div class="sec-title">Adicionar item</div>
+          <div class="palette" id="palette"><!-- filled by JS --></div>
+
+          <div class="sec-title">Agrupamento</div>
+          <div class="palette" id="palette-group" style="margin-bottom: 22px">
+            <!-- filled by JS -->
+          </div>
+
+          </div>
+        </aside>
+
+        <div class="canvas-wrap" id="wrap">
+          <svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
+          <textarea id="rename" rows="1"></textarea>
+          <div class="zlabel" id="zlabel">100%</div>
+          <div class="zoom">
+            <button id="z-in">+</button>
+            <button id="z-out">−</button>
+          </div>
+          <div class="float-tip" id="tip"></div>
+          <div class="marquee" id="marquee"></div>
+
+          <div class="nav-hint" id="nav-hint">
+            Arraste: seleção por caixa · Botão direito ou clique do scroll:
+            mover o quadro · Ctrl+clique: seleção múltipla
+          </div>
+
+          <div class="search-panel" id="search-panel" hidden>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="search-panel-icon"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              id="search-input"
+              class="search-input"
+              type="search"
+              placeholder="Nome da página... (Enter enquadra, Esc fecha)"
+              title="Destaca páginas pelo nome; Enter enquadra os resultados"
+            />
+            <button
+              class="float-panel-close"
+              id="search-close"
+              type="button"
+              title="Fechar (Esc)"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="float-panel" id="float-panel" hidden>
+            <div class="float-panel-head" id="float-panel-head">
+              <span id="float-panel-title">Selecionado</span>
+              <button
+                class="float-panel-close"
+                id="float-panel-close"
+                type="button"
+                title="Fechar"
+              >
+                ×
+              </button>
+            </div>
+            <div class="float-panel-body">
+              <div id="fp-node" hidden>
+                <div class="inspector-name" id="inspector-name"></div>
+                <label class="field-label" for="inspector-note">Notas</label>
+                <textarea
+                  id="inspector-note"
+                  class="note-textarea"
+                  rows="3"
+                  placeholder="Anotações sobre esta página... (aceita Markdown)"
+                ></textarea>
+                <div class="note-preview" id="inspector-note-preview"></div>
+                <label class="field-label" style="margin-top: 10px"
+                  >Status</label
+                >
+                <div class="status-row" id="status-row">
+                  <!-- filled by JS -->
+                </div>
+              </div>
+              <div id="fp-frame" hidden>
+                <div class="inspector-name" id="frame-inspector-name"></div>
+                <label class="field-label" for="frame-inspector-note"
+                  >Notas</label
+                >
+                <textarea
+                  id="frame-inspector-note"
+                  class="note-textarea"
+                  rows="3"
+                  placeholder="Anotações sobre este núcleo... (aceita Markdown)"
+                ></textarea>
+                <div
+                  class="note-preview"
+                  id="frame-inspector-note-preview"
+                ></div>
+                <label class="field-label" style="margin-top: 10px"
+                  >Cor do núcleo</label
+                >
+                <div class="color-row" id="frame-color-row">
+                  <!-- filled by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="minimap" id="minimap">
+            <svg id="minimap-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="help-overlay" hidden>
+      <div
+        class="modal"
+        id="help-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-title"
+      >
+        <div class="modal-title" id="help-title">
+          Como utilizar
+          <button class="modal-close" id="help-close" type="button" title="Fechar">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <b>Adicionar:</b> clique numa categoria na barra lateral.<br />
+          <b>Mover:</b> arraste o item.<br />
+          <b>Conectar:</b> passe o mouse sobre um item e arraste o ponto azul
+          até outro item.<br />
+          <b>Renomear:</b> duplo-clique.<br />
+          <b>Direção da seta:</b> duplo-clique na linha.<br />
+          <b>Apagar:</b> selecione e tecle <kbd>Delete</kbd>.<br />
+          <b>Núcleo:</b> crie em "Agrupamento", arraste itens para dentro;
+          arraste a aba do título para mover tudo junto e as alças p/
+          redimensionar em qualquer direção; selecione o núcleo para
+          personalizar a cor no painel flutuante.<br />
+          <b>Conectar o núcleo:</b> passe o mouse perto do canto superior
+          direito do núcleo e arraste o ponto azul até outro item ou até
+          outro núcleo.<br />
+          <b>Painel da seleção:</b> ao selecionar uma página ou núcleo, um
+          painel flutuante aparece — arraste pelo topo dele para
+          reposicionar; some ao desselecionar.<br />
+          <b>Buscar:</b> <kbd>Ctrl+F</kbd> abre a busca flutuante; Enter
+          enquadra os resultados, Esc fecha.<br />
+          <b>Mover o quadro:</b> arraste com o botão direito ou com o botão
+          do meio (scroll) do mouse · <b>zoom:</b> role o scroll (também
+          funciona sobre o minimapa) ou use os botões +/−.<br />
+          <b>Seleção múltipla:</b> <kbd>Ctrl+clique</kbd> alterna páginas na
+          seleção; arrastar com o botão esquerdo no vazio abre uma seleção
+          por caixa (some com Ctrl para somar à seleção atual, sem Ctrl ela
+          substitui).<br />
+          <b>Desfazer:</b> <kbd>Ctrl+Z</kbd> · <b>Copiar:</b>
+          <kbd>Ctrl+C</kbd> · <b>Colar:</b> <kbd>Ctrl+V</kbd>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="feedback-overlay" hidden>
+      <div
+        class="modal"
+        id="feedback-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-title"
+      >
+        <div class="modal-title" id="feedback-title">
+          Adicionar feedback
+          <button
+            class="modal-close"
+            id="feedback-close"
+            type="button"
+            title="Fechar"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          Relate um bug ou sugira uma melhoria. Escolha para onde enviar —
+          isso abre seu app de e-mail ou o WhatsApp com a mensagem
+          preenchida.
+          <textarea
+            id="feedback-text"
+            class="note-textarea"
+            style="width: 100%; min-height: 100px; margin-top: 10px"
+            placeholder="Descreva o bug ou a sugestão..."
+          ></textarea>
+        </div>
+        <div class="modal-actions" style="justify-content: flex-start">
+          <button class="btn" id="feedback-email" type="button">
+            Enviar por e-mail
+          </button>
+          <button class="btn primary" id="feedback-whatsapp" type="button">
+            Enviar por WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="confirm-overlay" hidden>
+      <div
+        class="modal"
+        id="confirm-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+      >
+        <div class="modal-title" id="confirm-title">Confirmar ação</div>
+        <div class="modal-body" id="confirm-message"></div>
+        <div class="modal-actions">
+          <button class="btn" id="confirm-cancel" type="button">
+            Cancelar
+          </button>
+          <button class="btn primary" id="confirm-ok" type="button">
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay export-preview-overlay" id="export-preview-overlay" hidden>
+      <div
+        class="export-preview-modal"
+        id="export-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-preview-title"
+      >
+        <div class="export-preview-head">
+          <span id="export-preview-title" class="export-preview-title"
+            >Pré-visualização</span
+          >
+          <label class="export-preview-field">
+            Legenda
+            <select class="sel" id="export-legend-select">
+              <option value="show">Com legenda</option>
+              <option value="hide">Sem legenda</option>
+            </select>
+          </label>
+          <label class="export-preview-field">
+            Tema
+            <select class="sel" id="export-theme-select">
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
+            </select>
+          </label>
+          <span class="export-preview-hint" id="export-preview-hint"
+            >Arraste a legenda no preview para reposicioná-la</span
+          >
+          <div class="spacer"></div>
+          <button class="btn" id="export-preview-cancel" type="button">
+            Cancelar
+          </button>
+          <button class="btn primary" id="export-preview-confirm" type="button">
+            Exportar
+          </button>
+          <button
+            class="modal-close"
+            id="export-preview-close"
+            type="button"
+            title="Fechar"
+          >
+            ×
+          </button>
+        </div>
+        <div class="export-preview-body" id="export-preview-body"></div>
+      </div>
+    </div>
+
+    <!-- config do Firebase: fica em firebase-config.js, fora do git (veja
+         .gitignore e firebase-config.example.js) -->
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
