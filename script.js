@@ -924,6 +924,7 @@ wrap.addEventListener(
 /* ---------------- selection / delete ---------------- */
 function select(type, id) {
   sel = { type, id };
+  if (type) closeSettings();
   render();
   updateInspector();
 }
@@ -933,13 +934,8 @@ function pushHistory() {
   if (history.length > MAX_HISTORY) history.shift();
   historyIdx = history.length - 1;
 }
-function undo() {
-  if (historyIdx <= 0) {
-    toast("Nada para desfazer");
-    return;
-  }
-  historyIdx--;
-  const data = JSON.parse(history[historyIdx]);
+function applyHistoryAt(idx) {
+  const data = JSON.parse(history[idx]);
   state.nodes = data.nodes || [];
   state.edges = data.edges || [];
   state.frames = data.frames || [];
@@ -954,7 +950,26 @@ function undo() {
   select(null);
   syncControls();
   render();
+}
+function undo() {
+  if (historyIdx <= 0) {
+    toast("Nada para desfazer");
+    return;
+  }
+  historyIdx--;
+  applyHistoryAt(historyIdx);
   toast("Desfeito");
+  persist();
+}
+function redo() {
+  if (historyIdx >= history.length - 1) {
+    toast("Nada para refazer");
+    return;
+  }
+  historyIdx++;
+  applyHistoryAt(historyIdx);
+  toast("Refeito");
+  persist();
 }
 function copySelected() {
   if (!sel.type) return;
@@ -1019,9 +1034,15 @@ window.addEventListener("keydown", (ev) => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
   if (document.getElementById("rename").style.display === "block") return;
   if (ev.ctrlKey || ev.metaKey) {
-    if (ev.key === "z") {
+    if (ev.key === "z" || ev.key === "Z") {
       ev.preventDefault();
-      undo();
+      if (ev.shiftKey) redo();
+      else undo();
+      return;
+    }
+    if (ev.key === "y" || ev.key === "Y") {
+      ev.preventDefault();
+      redo();
       return;
     }
     if (ev.key === "c") {
@@ -2636,13 +2657,16 @@ function snapshot() {
     legendPos: state.legendPos,
   });
 }
-async function autosave() {
-  pushHistory();
+async function persist() {
   try {
     if (window.storage)
       await window.storage.set("cluster:auto:v2", snapshot(), false);
   } catch (e) {}
   pushRemote();
+}
+async function autosave() {
+  pushHistory();
+  await persist();
 }
 async function loadAuto() {
   try {
@@ -3256,6 +3280,10 @@ settingsBtn.addEventListener("click", (ev) => {
   ev.stopPropagation();
   const willOpen = settingsPanel.hasAttribute("hidden");
   if (willOpen) {
+    // fecha o painel de página/núcleo selecionado — os dois flutuam no
+    // mesmo canto e ficam ilegíveis um por cima do outro
+    multiSel.clear();
+    select(null);
     settingsPanel.removeAttribute("hidden");
     settingsBtn.setAttribute("aria-expanded", "true");
   } else {

@@ -30,27 +30,32 @@ publicar a pasta como está (ex.: GitHub Pages).
 
 ### Publicar no GitHub Pages
 
-1. Faça push deste repositório para o GitHub.
-2. Em **Settings → Pages**, aponte para a branch/pasta onde está este
-   `index.html` (ex.: `main` / `/mapa mental`, ou mova o conteúdo para a raiz
-   se preferir a URL curta).
-3. Acesse a URL gerada pelo GitHub Pages.
+`firebase-config.js` está no `.gitignore` — nunca é commitado, então ele
+**não** aparece no repositório público nem no histórico do Git. Um workflow
+em `.github/workflows/deploy.yml` gera esse arquivo a cada push na `main`, a
+partir de secrets do repositório, e publica no GitHub Pages via GitHub
+Actions (em vez do modo clássico "deploy a partir da branch").
 
-**Sobre `firebase-config.js` no Pages:** esse arquivo está no `.gitignore`
-(veja "Colaboração em tempo real" abaixo), então um push normal **não** o
-leva para o GitHub — o site publicado ficaria sem colaboração configurada.
-Se você quer colaboração funcionando no Pages, force a inclusão dele antes
-de publicar (o `.gitignore` continua valendo para todo o resto, então isso
-não muda seu fluxo normal de `git add`):
-```
-git add -f "mapa mental/firebase-config.js"
-git commit -m "Publica config do Firebase"
-git push
-```
-Repita isso sempre que atualizar os valores em `firebase-config.js`. (O
-`firebaseConfig` do Firebase Web não é secreto — quem abrir o site já
-consegue ver esses valores; a proteção de verdade são as regras do
-Realtime Database e o Authorized domains configurados abaixo.)
+1. Em **Settings → Secrets and variables → Actions → New repository
+   secret**, crie estes 4 secrets com os valores do seu `firebaseConfig`
+   (os mesmos que estão no seu `firebase-config.js` local):
+   - `FIREBASE_API_KEY`
+   - `FIREBASE_AUTH_DOMAIN`
+   - `FIREBASE_DATABASE_URL`
+   - `FIREBASE_PROJECT_ID`
+2. Em **Settings → Pages → Build and deployment → Source**, troque para
+   **GitHub Actions** (em vez de "Deploy from a branch").
+3. Faça push para `main`. O workflow roda, gera o `firebase-config.js` com
+   os secrets e publica. Acompanhe em **Actions**.
+4. Acesse a URL gerada pelo GitHub Pages.
+
+**Isso não torna a chave secreta** — o `firebaseConfig` do Firebase Web
+nunca é: quem abrir o site publicado ainda consegue ver esses valores pela
+aba Rede do navegador, porque o app precisa deles no cliente para
+funcionar. O que isso evita é só a chave ficar exposta *no código-fonte do
+repositório* (histórico do Git, arquivo visível em `github.com/...`). A
+proteção de verdade continua sendo as regras do Realtime Database e o
+Authorized domains configurados abaixo — isso não muda.
 
 ## Colaboração em tempo real (com login obrigatório)
 
@@ -74,10 +79,12 @@ Firebase Authentication. Para ativar:
 5. Em **Configurações do projeto → Geral → Seus aplicativos**, registre um
    app Web (ícone `</>`) e copie o objeto `firebaseConfig` que aparece. Copie
    `firebase-config.example.js` para `firebase-config.js` (mesma pasta) e
-   cole os valores lá, substituindo os placeholders (`SUA_API_KEY` etc.).
-   `firebase-config.js` está no `.gitignore` — suas credenciais reais nunca
-   são commitadas; só `firebase-config.example.js` (com os placeholders)
-   fica versionado.
+   cole os valores lá, substituindo os placeholders (`SUA_API_KEY` etc.) —
+   isso é só para rodar/testar localmente. `firebase-config.js` está no
+   `.gitignore`; suas credenciais reais nunca são commitadas, só
+   `firebase-config.example.js` (com os placeholders) fica versionado. Para
+   o site publicado usar esses mesmos valores, cadastre-os como secrets do
+   repositório — veja "Publicar no GitHub Pages" acima.
 6. Em **Realtime Database → Regras**, cole (troque os e-mails de exemplo
    pelos das pessoas autorizadas; duplique a linha `auth.token.email == ...`
    para cada uma):

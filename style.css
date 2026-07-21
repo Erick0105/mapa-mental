@@ -1069,8 +1069,20 @@ svg#stage {
   .work {
     grid-template-columns: 1fr;
   }
+  /* em telas estreitas a barra lateral vira uma gaveta que desliza por
+     cima do quadro, em vez de dividir a largura com ele — senão não
+     sobra espaço nem pra ver o quadro nem pra usar a paleta */
   aside {
-    display: none;
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 240px;
+    z-index: 35;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease;
+    box-shadow: var(--shadow);
+  }
+  .work:not(.aside-collapsed) aside {
+    transform: translateX(0);
   }
   .brand span {
     display: none;
