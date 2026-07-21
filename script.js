@@ -2983,12 +2983,41 @@ function handlePermissionDenied() {
   toast("Seu e-mail não tem permissão para este quadro");
 }
 
-function connectCollab() {
+async function migrateLegacyBoard(roomRef, boardRef) {
+  // versões antigas guardavam nodes/edges/frames direto na raiz da sala,
+  // no mesmo nível de _presence — isso fazia a presença (atualizada a
+  // cada movimento do mouse) disparar o listener "value" do quadro
+  // inteiro e sobrescrever posições recém-arrastadas. Migra uma vez para
+  // "board", que fica isolado de _presence.
+  try {
+    const boardSnap = await boardRef.once("value");
+    if (boardSnap.exists()) return;
+    const roomSnap = await roomRef.once("value");
+    const data = roomSnap.val();
+    if (!data) return;
+    const legacy = { ...data };
+    delete legacy._presence;
+    delete legacy.board;
+    if (Object.keys(legacy).length === 0) return;
+    await boardRef.set(legacy);
+    await roomRef.update({
+      nodes: null,
+      edges: null,
+      frames: null,
+      catDesc: null,
+      legendPos: null,
+      view: null,
+    });
+  } catch (e) {}
+}
+async function connectCollab() {
   permissionShown = false;
   const db = firebase.database();
-  collabRef = db.ref("clusters/" + roomId);
-  presenceListRef = db.ref("clusters/" + roomId + "/_presence");
+  const roomRef = db.ref("clusters/" + roomId);
+  collabRef = roomRef.child("board");
+  presenceListRef = roomRef.child("_presence");
   presenceRef = presenceListRef.child(clientId);
+  await migrateLegacyBoard(roomRef, collabRef);
   db.ref(".info/connected").on("value", (snap) => {
     if (permissionShown) return;
     setCollabStatus(snap.val() ? "on" : "off");
