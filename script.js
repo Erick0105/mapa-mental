@@ -2976,11 +2976,17 @@ function setCollabStatus(status) {
   dot.title = titles[status] || titles.off;
 }
 
+const denyOverlay = document.getElementById("denied-overlay");
+document.getElementById("denied-leave").addEventListener("click", leaveRoom);
+
 function handlePermissionDenied() {
   if (permissionShown) return;
   permissionShown = true;
   setCollabStatus("denied");
-  toast("Seu e-mail não tem permissão para este quadro");
+  const user = firebase.auth().currentUser;
+  document.getElementById("denied-email").textContent = user ? user.email : "";
+  document.getElementById("denied-room").textContent = roomId;
+  denyOverlay.hidden = false;
 }
 
 async function migrateLegacyBoard(roomRef, boardRef) {
@@ -3096,6 +3102,7 @@ function disconnectCollab() {
   hasSyncedOnce = false;
   lastSyncedJSON = null;
   setCollabStatus("signedout");
+  denyOverlay.hidden = true;
 }
 
 function pushRemote(force) {
@@ -3132,6 +3139,13 @@ function slugifyRoom(raw) {
   return slug || "geral";
 }
 
+function updateRoomUI() {
+  const isCustomRoom = roomId !== "geral";
+  document.getElementById("room-sec-title").hidden = !isCustomRoom;
+  document.getElementById("room-row").hidden = !isCustomRoom;
+  document.getElementById("room-name-label").textContent = roomId;
+}
+
 function switchRoom(newRoom) {
   if (newRoom === roomId) return;
   const wasConnected = !!collabRef;
@@ -3140,8 +3154,28 @@ function switchRoom(newRoom) {
   const url = new URL(location.href);
   url.searchParams.set("room", roomId);
   window.history.replaceState(null, "", url);
+  updateRoomUI();
   if (wasConnected) connectCollab();
 }
+
+function leaveRoom() {
+  closeSettings();
+  denyOverlay.hidden = true;
+  const url = new URL(location.href);
+  url.searchParams.delete("room");
+  window.history.replaceState(null, "", url);
+  roomId = "geral";
+  updateRoomUI();
+  // permissão é a mesma lista de e-mails pra qualquer sala (inclusive
+  // "geral"), então continuar logado só levaria à mesma tela de bloqueio —
+  // sair da sala também desconecta a conta pra voltar ao uso 100% local.
+  if (firebase.auth().currentUser) {
+    firebase.auth().signOut();
+  } else if (collabRef) {
+    disconnectCollab();
+  }
+}
+updateRoomUI();
 
 function openShare() {
   closeSettings();
@@ -3323,6 +3357,7 @@ document.getElementById("btn-google-signin").addEventListener("click", () => {
 document.getElementById("btn-signout").addEventListener("click", () => {
   firebase.auth().signOut();
 });
+document.getElementById("btn-leave-room").addEventListener("click", leaveRoom);
 function initFirebase() {
   const signinBtn = document.getElementById("btn-google-signin");
   if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "SUA_API_KEY") {

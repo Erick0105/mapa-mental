@@ -219,6 +219,25 @@
               </button>
             </div>
 
+            <div class="settings-sec-title" id="room-sec-title" hidden>
+              Sala
+            </div>
+            <div id="room-row" hidden>
+              <small
+                style="
+                  display: block;
+                  margin-bottom: 6px;
+                  color: var(--muted);
+                  font-size: 11px;
+                "
+              >
+                Você está na sala <b id="room-name-label"></b>
+              </small>
+              <button class="btn" id="btn-leave-room" style="width: 100%">
+                Sair da sala
+              </button>
+            </div>
+
             <div class="settings-sec-title">Ajuda</div>
             <div class="export-row">
               <button class="btn" id="btn-help" style="flex: 1 1 100%">
@@ -500,6 +519,28 @@
           </button>
           <button class="btn primary" id="share-copy" type="button">
             Copiar link
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="denied-overlay" hidden>
+      <div
+        class="modal"
+        id="denied-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="denied-title"
+      >
+        <div class="modal-title" id="denied-title">Acesso não permitido</div>
+        <div class="modal-body">
+          Sua conta (<b id="denied-email"></b>) não tem permissão para ver ou
+          editar a sala <b id="denied-room"></b>. Peça para quem compartilhou
+          o link te adicionar, ou saia da sala para usar o quadro localmente.
+        </div>
+        <div class="modal-actions">
+          <button class="btn primary" id="denied-leave" type="button">
+            Sair da sala
           </button>
         </div>
       </div>
